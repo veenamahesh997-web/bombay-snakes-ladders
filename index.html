@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Snakes &amp; Ladders: Bombay Edition</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Atkinson+Hyperlegible:wght@400;700&family=Barlow+Condensed:wght@700;800&display=swap">
+<style>
+/* Layout: one phone-width column, an 8-bit game screen around an illustrated red-and-pink board. One deliberate look matching the printed bookmark. */
+:root{
+  --bg:#10155A; --deep:#0B0F45; --frame:#2C3FE0; --surface:#1A2075; --line:#3442B8;
+  --fg:#FFFFFF; --muted:#C3C8F2;
+  --yellow:#FFE14D; --pink:#FF4FA3; --green:#7CFF6B; --on-yellow:#1A1405; --shadow:#060930;
+  --b-red:#E53946; --b-pink:#F6A9C3; --b-ink:#3A0A12; --b-teal:#22B2C6; --b-green:#13805A; --b-ladder:#F7C35F;
+  --pixel:'Pixelify Sans','Courier New',monospace;
+  --body:'Atkinson Hyperlegible',system-ui,-apple-system,sans-serif;
+  --num:'Barlow Condensed','Arial Narrow',sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background-color:var(--bg);background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:22px 22px;color:var(--fg);font-family:var(--body);font-size:17px;line-height:1.5}
+.wrap{max-width:460px;margin:0 auto;padding-inline:16px;padding-block:22px 48px}
+.screen{display:flex;flex-direction:column;gap:16px}
+.eyebrow{font-family:var(--pixel);font-size:15px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--green)}
+h1{margin:0;font-family:var(--pixel);font-weight:700;font-size:clamp(40px,12vw,56px);line-height:.95;color:var(--yellow);text-wrap:balance}
+.sub{font-family:var(--pixel);font-size:24px;font-weight:700;color:var(--pink);margin-top:-6px}
+h2{margin:0;font-family:var(--pixel);font-weight:700;font-size:30px;line-height:1.05;color:var(--yellow);text-wrap:balance}
+p{margin:0}
+.lede{font-size:18px}
+.muted{color:var(--muted)}
+.panel{background:var(--surface);border:3px solid var(--frame);box-shadow:5px 5px 0 var(--shadow);padding:16px;display:flex;flex-direction:column;gap:12px}
+.btn{display:block;width:100%;min-height:56px;padding:12px 20px;border:3px solid var(--yellow);background:var(--pink);color:var(--fg);font:700 22px var(--pixel);letter-spacing:.04em;text-align:center;text-decoration:none;cursor:pointer;box-shadow:5px 5px 0 var(--shadow)}
+.btn:active{transform:translate(3px,3px);box-shadow:2px 2px 0 var(--shadow)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+.btn.yellow{background:var(--yellow);color:var(--on-yellow);border-color:var(--fg)}
+.btn.ghost{background:transparent;border-color:var(--frame)}
+.btns{display:flex;flex-direction:column;gap:14px}
+:focus-visible{outline:3px solid var(--yellow);outline-offset:3px}
+.lbl{font-family:var(--pixel);font-size:17px;font-weight:500}
+.seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.seg button{min-height:56px;padding:8px;border:3px solid var(--line);background:var(--deep);color:var(--fg);font:500 17px var(--pixel);cursor:pointer}
+.seg button[aria-pressed=true]{border-color:var(--yellow);color:var(--yellow)}
+input[type=text]{width:100%;min-height:50px;padding:10px 14px;border:3px solid var(--line);background:var(--deep);color:var(--fg);font:500 20px var(--pixel)}
+input[type=text]::placeholder{color:var(--muted)}
+input[type=text]:focus{border-color:var(--yellow);outline:none}
+.field{display:flex;flex-direction:column;gap:6px}
+.hero{display:block;width:84px;height:84px}
+
+/* Avatar maker */
+.maker{display:grid;grid-template-columns:96px minmax(0,1fr);gap:14px;align-items:center}
+.preview{width:96px;height:96px;border:3px solid var(--yellow);background:var(--muted);padding:6px}
+.preview svg{display:block;width:100%;height:100%}
+.swrow{display:flex;flex-direction:column;gap:6px}
+.swrow .lbl{font-size:14px;color:var(--muted)}
+.sws{display:flex;flex-wrap:wrap;gap:8px}
+.sw{width:36px;height:36px;border:3px solid var(--line);padding:0;cursor:pointer}
+.sw[aria-pressed=true]{border-color:var(--fg);box-shadow:0 0 0 3px var(--yellow)}
+.pick-row{display:grid;grid-template-columns:48px minmax(0,1fr) 48px;gap:8px;align-items:center}
+.arrow{width:48px;height:44px;border:3px solid var(--yellow);background:var(--deep);color:var(--yellow);font:700 18px var(--pixel);cursor:pointer;box-shadow:3px 3px 0 var(--shadow)}
+.arrow:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--shadow)}
+.pick-mid{display:flex;flex-direction:column;align-items:center;text-align:center;line-height:1.15}
+.pick-lbl{font:500 13px var(--pixel);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.pick-val{font:700 18px var(--pixel);color:var(--fg)}
+.chip{min-width:44px;height:36px;padding:0 12px;border:3px solid var(--line);background:var(--deep);color:var(--fg);font:500 15px var(--pixel);cursor:pointer}
+.chip[aria-pressed=true]{border-color:var(--yellow);color:var(--yellow)}
+.sw.eraser{background:var(--deep);color:var(--fg);font:700 10px var(--pixel)}
+.pad-wrap{width:100%;max-width:264px;aspect-ratio:1;align-self:center;border:3px solid var(--line);background-color:var(--deep);background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:calc(100% / 16) calc(100% / 16)}
+#pad{display:block;width:100%;height:100%;image-rendering:pixelated;touch-action:none;cursor:crosshair}
+.small-btn{align-self:center;min-height:44px;padding:0 16px;border:3px solid var(--line);background:transparent;color:var(--fg);font:500 15px var(--pixel);cursor:pointer}
+
+/* Game frame */
+.turn{display:flex;align-items:center;gap:10px;font-family:var(--pixel);font-size:20px;font-weight:700;min-height:44px}
+.turn .sprite{width:40px;height:40px}
+
+/* The board (illustrated) */
+.board{position:relative;width:100%;aspect-ratio:1;border:4px solid var(--frame);box-shadow:5px 5px 0 var(--shadow);background:var(--b-pink)}
+.cells{position:absolute;inset:0;display:grid;grid-template-columns:repeat(10,minmax(0,1fr));grid-template-rows:repeat(10,minmax(0,1fr));overflow:hidden}
+.cell{position:relative;font-family:var(--num);font-weight:800;font-size:clamp(10px,3.2vw,16px);line-height:1;padding:3px 0 0 4px;border:0;text-align:left}
+.cell.r{background:var(--b-red);color:var(--b-pink)}
+.cell.p{background:var(--b-pink);color:var(--b-red)}
+.cell.goal{background:var(--b-ink);color:var(--b-ladder)}
+.cell.event{cursor:pointer}
+.overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.token{position:absolute;width:10%;height:10%;display:grid;place-items:center;transform:translate(-50%,-50%);transition:left .15s steps(2),top .15s steps(2);pointer-events:none;z-index:4}
+.token .sprite{width:82%;height:82%;filter:drop-shadow(1px 1px 0 var(--shadow))}
+
+/* Tooltip bubble (pixel) */
+.bubble{position:absolute;z-index:6;max-width:62%;min-width:120px;background:var(--fg);color:var(--deep);border:3px solid var(--deep);padding:8px 10px;font:700 15px/1.2 var(--pixel);box-shadow:4px 4px 0 var(--shadow);transform:translate(-50%,calc(-100% - 20px));pointer-events:none;text-align:center}
+.bubble::after{content:"";position:absolute;left:50%;bottom:-12px;width:12px;height:12px;background:var(--fg);border-right:3px solid var(--deep);border-bottom:3px solid var(--deep);transform:translateX(-50%) rotate(45deg)}
+.bubble.below{transform:translate(-50%,20px)}
+.bubble.below::after{bottom:auto;top:-12px;transform:translateX(-50%) rotate(225deg)}
+.bubble.up{background:var(--yellow)} .bubble.up::after{background:var(--yellow)}
+.bubble.down{background:var(--pink);color:var(--fg)} .bubble.down::after{background:var(--pink)}
+
+.controls{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center}
+.die{width:72px;height:72px;border:4px solid var(--fg);background:var(--yellow);color:var(--on-yellow);display:grid;place-items:center;font:700 40px var(--pixel);box-shadow:4px 4px 0 var(--shadow)}
+.log{display:grid;grid-template-columns:36px minmax(0,1fr);gap:12px;align-items:center;min-height:76px}
+.log .ico{width:36px;height:36px}
+.log p{font-size:17px}
+.log strong{font-family:var(--pixel);color:var(--yellow);font-weight:700}
+.legend{display:flex;gap:10px 16px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:14px;height:14px}
+.textbtn{align-self:center;min-height:44px;padding:0 14px;background:none;border:0;color:var(--muted);font:500 15px var(--pixel);text-decoration:underline;cursor:pointer}
+
+/* Crossword answers */
+.answers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.answers h3{margin:0 0 4px;font:700 16px var(--pixel);color:var(--green);letter-spacing:.12em}
+.answers ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font-family:var(--pixel);font-size:18px}
+.answers b{color:var(--yellow)}
+
+/* Win */
+.cert{align-items:center;text-align:center;border-color:var(--yellow)}
+.cert .sprite{width:120px;height:120px}
+.stats{display:flex;justify-content:center;gap:10px 18px;flex-wrap:wrap;font-family:var(--pixel);font-size:16px;color:var(--muted)}
+.stats b{color:var(--fg)}
+.about{border-top:3px solid var(--frame);padding-top:18px;display:flex;flex-direction:column;gap:12px}
+@media (prefers-reduced-motion:no-preference){
+  .screen{animation:in .24s steps(3)}
+  @keyframes in{from{opacity:.3;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .die.rolling{animation:shake .12s steps(2) infinite}
+  @keyframes shake{50%{transform:rotate(8deg)}}
+  .float{animation:bob 1.2s steps(2) infinite}
+  @keyframes bob{50%{transform:translateY(-4px)}}
+  .bubble{animation:pop .22s steps(3)}
+  @keyframes pop{from{opacity:0;scale:.6}to{opacity:1;scale:1}}
+}
+@media (prefers-reduced-motion:reduce){.token{transition:none}}
+</style>
+</head>
+<body>
+
+<main class="wrap">
+
+  <!-- Start -->
+  <section class="screen" id="intro">
+    <span class="hero float" data-sprite="bot"></span>
+    <div class="eyebrow">Player 1, press start</div>
+    <div>
+      <h1>Snakes &amp; Ladders</h1>
+      <div class="sub">Bombay Edition</div>
+    </div>
+    <p class="lede">The board game India gave the world, now with fast locals, monsoon puddles and meetings that should have been emails.</p>
+
+    <div class="panel">
+      <div class="lbl">Make your player</div>
+      <div class="maker">
+        <div class="preview" id="preview" aria-label="Your player preview" role="img"></div>
+        <div class="seg">
+          <button type="button" id="tab-build" aria-pressed="true">Build</button>
+          <button type="button" id="tab-draw" aria-pressed="false">Draw</button>
+        </div>
+      </div>
+      <div id="build-pane" class="screen" style="gap:12px"></div>
+      <div id="draw-pane" class="screen" style="gap:12px" hidden>
+        <p class="muted" style="font-size:15px">Tap or drag to paint pixels. We started you off with your built player.</p>
+        <div class="pad-wrap"><canvas id="pad" width="240" height="240" aria-label="16 by 16 pixel drawing pad"></canvas></div>
+        <div class="sws" id="paints" style="justify-content:center"></div>
+        <button class="small-btn" id="clear" type="button">Clear</button>
+      </div>
+      <div class="field">
+        <label class="lbl" for="p1-name">Your name</label>
+        <input type="text" id="p1-name" maxlength="14" placeholder="Player 1" autocomplete="off">
+      </div>
+      <p class="muted" style="font-size:15px">You vs Veena. First to 100 wins.</p>
+    </div>
+    <button class="btn" id="start" type="button" disabled>Press start</button>
+    <p class="muted" id="start-hint" style="font-size:15px;text-align:center;margin-top:-6px">Enter your name to start</p>
+    <button class="btn ghost" type="button" data-answers>Crossword answers</button>
+  </section>
+
+  <!-- Game -->
+  <section class="screen" id="game" hidden>
+    <div class="turn" id="turn"></div>
+    <div class="board" id="board" role="group" aria-label="Snakes and ladders board">
+      <div class="cells" id="cells"></div>
+      <svg class="overlay" id="overlay" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"></svg>
+      <div id="tokens"></div>
+      <div class="bubble" id="bubble" hidden></div>
+    </div>
+    <div class="controls">
+      <div class="die" id="die" aria-hidden="true">?</div>
+      <button class="btn yellow" id="roll" type="button">Roll the dice</button>
+    </div>
+    <div class="panel log" aria-live="polite">
+      <span class="ico" id="log-ico"></span>
+      <p id="log-text">First to square 100 wins. You need the exact number to land on it.</p>
+    </div>
+    <div class="legend"><span><i style="background:var(--b-ladder)"></i>Ladders climb</span><span><i style="background:var(--b-teal)"></i>Snakes slide</span><span><i style="background:var(--green)"></i>Roll a 6, go again</span><span>Tap a snake or ladder square to read it</span></div>
+    <button class="textbtn" id="quit" type="button">Start over</button>
+  </section>
+
+  <!-- Win -->
+  <section class="screen" id="win" hidden>
+    <div class="panel cert">
+      <span class="sprite" id="win-sprite"></span>
+      <div class="eyebrow">Game over</div>
+      <h2 id="win-title"></h2>
+      <p class="muted" id="win-text"></p>
+      <div class="stats" id="win-stats"></div>
+    </div>
+    <button class="btn yellow" id="rematch" type="button">Rematch</button>
+    <button class="btn ghost" type="button" data-answers>Crossword answers</button>
+
+    <div class="about">
+      <div class="eyebrow">Who made this</div>
+      <p class="lede">Hi, I’m Veena Mahesh. Senior Product Designer at Forbes Advisor and co-founder of Bombay Design Junction.</p>
+      <p>Thanks for playing. Come say hi.</p>
+      <div class="btns">
+        <!-- Replace YOUR-HANDLE with your LinkedIn handle -->
+        <a class="btn" href="https://www.linkedin.com/in/YOUR-HANDLE" target="_blank" rel="noopener">Connect on LinkedIn</a>
+        <!-- Replace YOUR-HANDLE with your Instagram handle -->
+        <a class="btn ghost" href="https://www.instagram.com/YOUR-HANDLE" target="_blank" rel="noopener">Follow on Instagram</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Crossword answers -->
+  <section class="screen" id="answers" hidden>
+    <div class="eyebrow">Level 2</div>
+    <h2>The Design Bombay Mystery: answers</h2>
+    <p class="muted">Spoilers below. Only peek if you’ve given it a real go.</p>
+    <button class="btn" id="reveal" type="button">I tried. Show me.</button>
+    <div class="panel" id="answer-card" hidden>
+      <div class="answers">
+        <div><h3>ACROSS</h3><ul><li><b>3</b> KERNING</li><li><b>5</b> SUSPECT</li><li><b>8</b> SEVEN</li></ul></div>
+        <div><h3>DOWN</h3><ul><li><b>1</b> MOTIVE</li><li><b>2</b> MENU</li><li><b>4</b> GUT</li><li><b>6</b> PIXEL</li><li><b>7</b> CLUE</li></ul></div>
+      </div>
+      <p class="muted">“Keming” is what you get when bad kerning squashes the r and n into an m. Bombay really was seven islands, joined over centuries of land reclamation.</p>
+    </div>
+    <button class="btn ghost" id="answers-back" type="button">Back</button>
+  </section>
+
+</main>
+
+<script>
+(function(){
+  function $(id){ return document.getElementById(id); }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function pick(a){ return a[Math.floor(Math.random() * a.length)]; }
+
+  /* ---------- Pixel sprites (12 x 12) ---------- */
+  /* Avatar layers, drawn in order: top, face, hair, hat */
+  var E = '................';
+  var LAYERS = {
+    body:[E,E,E,E,E,E,E,E,E,E,E,"......ssss......","...aaaaaaaaaa...","..aaaaaaaaaaaa..","..aaaaaaaaaaaa..","..aaaaaaaaaaaa.."],
+    face:[E,E,E,".....ssssss.....","....ssssssss....","....ssssssss....","....ssssssss....","....ssssssss....","....ssssssss....","....ssssssss....",".....ssssss.....",E,E,E,E,E],
+    hair:{
+      bun:["......rrrr......",".....rrrrrr.....","....rrrrrrrr....","...rrrrrrrrrr...","...rrrrrrrrrr...","...r........r...","...r........r...",E,E,E,E,E,E,E,E,E],
+      short:[E,".....rrrrrr.....","....rrrrrrrr....","...rrrrrrrrrr...","...rrrrrrrrrr...","...r........r...","...r........r...",E,E,E,E,E,E,E,E,E],
+      long:[E,".....rrrrrr.....","....rrrrrrrr....","..rrrrrrrrrrrr..","..rrrrrrrrrrrr..","..rr........rr..","..rr........rr..","..rr........rr..","..rr........rr..","..rr........rr..","..rr........rr..","..rr........rr..","..rr........rr..","..rr........rr..",E,E],
+      curly:[".....r.rr.r.....","....rrrrrrrr....","...rrrrrrrrrr...","..rrrrrrrrrrrr..",".rrrrrrrrrrrrrr.",".rrr........rrr.","rrr..........rrr",".rrr........rrr.","rrr..........rrr",".rrr........rrr.","rrr..........rrr",".rr..........rr.","..r..........r..",E,E,E],
+      none:null
+    },
+    hat:[".....hhhhhh.....","....hhhhhhhh....","....hhhhhhhh....","..hhhhhhhhhhhh..",E,E,E,E,E,E,E,E,E,E,E,E]
+  };
+  /* Expressions replace face rows 6 to 10: eyes, cheeks, mouth */
+  var EXPR = {
+    happy:['....ssessess....','....ssessess....','....scsssscs....','....ssmssmss....','.....ssmmss.....'],
+    joyful:['....ssessess....','....seseeses....','....ssssssss....','....smssssms....','.....smmmms.....'],
+    cool:['...eeeeeeeeee...','....eeesseee....','....ssssssss....','....sssmmmss....','.....ssssss.....'],
+    wink:['....ssesssss....','....sseseees....','....scsssscs....','....ssmssmss....','.....ssmmss.....'],
+    surprised:['....ssessess....','....ssessess....','....ssssssss....','....sssmmsss....','.....ssmmss.....'],
+    calm:['....ssessess....','....ssessess....','....ssssssss....','....sssmmsss....','.....ssssss.....']
+  };
+  function compose(cfg){
+    var map = {s:cfg.s, a:cfg.a, r:cfg.r, h:cfg.hat, e:'#2B1A12', m:'#8A2B3A', c:'#F7A1B5'}, g = new Array(256).fill(null);
+    function lay(rows){ if (!rows) return; rows.forEach(function(row, y){ for (var x = 0; x < 16; x++){ var ch = row[x]; if (ch !== '.' && map[ch]) g[y * 16 + x] = map[ch]; } }); }
+    var face = LAYERS.face.slice(), ex = EXPR[cfg.face] || EXPR.happy;
+    for (var k = 0; k < 5; k++) face[6 + k] = ex[k];
+    lay(LAYERS.body); lay(face); lay(LAYERS.hair[cfg.hair]); if (cfg.hat) lay(LAYERS.hat);
+    return g;
+  }
+  var VEENA = {hair:'curly', r:'#2B1A12', s:'#C68642', a:'#8E44E8', hat:null, face:'happy'};
+  var ICONS = {
+    ladder:["#..........#","#..........#","############","#..........#","#..........#","############","#..........#","#..........#","############","#..........#","#..........#","#..........#"],
+    snake:["............","..pppp......",".pyppyp.....",".pppppp.....","..pppp......","...pp.......","....pp......",".....ppp....","......ppp...",".......ppp..","........pp..","..........pp"],
+    dice:["############","#yyyyyyyyyy#","#y##yyyy##y#","#y##yyyy##y#","#yyyyyyyyyy#","#yyyy##yyyy#","#yyyy##yyyy#","#yyyyyyyyyy#","#y##yyyy##y#","#y##yyyy##y#","#yyyyyyyyyy#","############"]
+  };
+  var ICON_COLORS = {'#':'#FFE14D','y':'#FFE14D','p':'#FF4FA3'};
+  var DICE_COLORS = {'#':'#FFFFFF','y':'#FFE14D'};
+  function svg(rows, colors){
+    var out = '';
+    rows.forEach(function(row, y){
+      for (var x = 0; x < row.length; x++){
+        var c = colors[row[x]];
+        if (c) out += '<rect x="' + x + '" y="' + y + '" width="1.02" height="1.02" fill="' + c + '"/>';
+      }
+    });
+    return '<svg class="sprite" viewBox="0 0 12 12" width="100%" height="100%" shape-rendering="crispEdges" aria-hidden="true">' + out + '</svg>';
+  }
+  document.querySelectorAll('[data-sprite]').forEach(function(el){ el.innerHTML = gridSvg(compose(VEENA)); });
+  function icon(name){ return svg(ICONS[name], name === 'dice' ? DICE_COLORS : ICON_COLORS); }
+
+  /* ---------- Avatar maker ---------- */
+  var PICKS = {
+    hair:[
+      {n:'Black curls', v:['curly','#1B1B1B']}, {n:'Brown curls', v:['curly','#5A3A22']}, {n:'Purple curls', v:['curly','#8E44E8']},
+      {n:'Black long', v:['long','#1B1B1B']}, {n:'Brown long', v:['long','#5A3A22']}, {n:'Auburn long', v:['long','#8B3A1E']}, {n:'Blonde long', v:['long','#E8C25A']}, {n:'Blue long', v:['long','#3B8BFF']},
+      {n:'Black short', v:['short','#1B1B1B']}, {n:'Brown short', v:['short','#5A3A22']}, {n:'Blonde short', v:['short','#E8C25A']}, {n:'Pink short', v:['short','#FF4FA3']},
+      {n:'Black bun', v:['bun','#1B1B1B']}, {n:'Silver bun', v:['bun','#B8B8C8']}, {n:'Bald', v:['none',null]}
+    ],
+    face:[{n:'Happy',v:'happy'},{n:'Joyful',v:'joyful'},{n:'Cool',v:'cool'},{n:'Wink',v:'wink'},{n:'Surprised',v:'surprised'},{n:'Calm',v:'calm'}],
+    skin:[{n:'Light',v:'#F1C27D'},{n:'Wheat',v:'#E0AC69'},{n:'Brown',v:'#C68642'},{n:'Deep',v:'#8D5524'}],
+    top:[{n:'Blue',v:'#3B8BFF'},{n:'Purple',v:'#8E44E8'},{n:'Pink',v:'#FF4FA3'},{n:'Green',v:'#2FBF71'},{n:'Yellow',v:'#FFE14D'},{n:'Black',v:'#14141A'}],
+    hat:[{n:'No hat',v:null},{n:'Detective',v:'#B5651D'},{n:'Blue hat',v:'#3B8BFF'},{n:'Pink hat',v:'#FF4FA3'},{n:'Black hat',v:'#14141A'}]
+  };
+  var LABELS = {hair:'Hair', face:'Face', skin:'Skin', top:'Top', hat:'Hat'};
+  var built = {hair:8, face:0, skin:0, top:0, hat:0};
+  function cfg(){
+    var h = PICKS.hair[built.hair].v;
+    return {hair:h[0], r:h[1], face:PICKS.face[built.face].v, s:PICKS.skin[built.skin].v, a:PICKS.top[built.top].v, hat:PICKS.hat[built.hat].v};
+  }
+  var avMode = 'build', grid = null, paint = '#FF4FA3';
+  var PAINTS = ['#0B0F45','#FFFFFF','#3B8BFF','#FF4FA3','#7CFF6B','#FFE14D','#B5651D','#F1C27D','#C68642','#8D5524'];
+
+  function gridSvg(g){
+    var out = '';
+    for (var i = 0; i < 256; i++) if (g[i]) out += '<rect x="' + (i % 16) + '" y="' + Math.floor(i / 16) + '" width="1.02" height="1.02" fill="' + g[i] + '"/>';
+    return '<svg class="sprite" viewBox="0 0 16 16" width="100%" height="100%" shape-rendering="crispEdges" aria-hidden="true">' + out + '</svg>';
+  }
+  function gridFromBuilt(){ return compose(cfg()); }
+  function hasPixels(g){ return g && g.some(function(c){ return !!c; }); }
+  function currentAvatar(){ return (avMode === 'draw' && hasPixels(grid)) ? gridSvg(grid) : gridSvg(compose(cfg())); }
+  function refreshPreview(){ $('preview').innerHTML = currentAvatar(); }
+
+  /* Picker rows: ◀ Label: value ▶, like a classic game character select */
+  var valueEls = {};
+  Object.keys(LABELS).forEach(function(key){
+    var row = document.createElement('div'); row.className = 'pick-row';
+    var prev = document.createElement('button'); prev.type = 'button'; prev.className = 'arrow'; prev.textContent = '◀'; prev.setAttribute('aria-label', 'Previous ' + LABELS[key]);
+    var next = document.createElement('button'); next.type = 'button'; next.className = 'arrow'; next.textContent = '▶'; next.setAttribute('aria-label', 'Next ' + LABELS[key]);
+    var mid = document.createElement('div'); mid.className = 'pick-mid';
+    mid.innerHTML = '<span class="pick-lbl">' + LABELS[key] + '</span><span class="pick-val" aria-live="polite"></span>';
+    valueEls[key] = mid.querySelector('.pick-val');
+    function step(d){ var n = PICKS[key].length; built[key] = (built[key] + d + n) % n; syncPicks(); refreshPreview(); }
+    prev.addEventListener('click', function(){ step(-1); });
+    next.addEventListener('click', function(){ step(1); });
+    row.appendChild(prev); row.appendChild(mid); row.appendChild(next);
+    $('build-pane').appendChild(row);
+  });
+  var rnd = document.createElement('button'); rnd.type = 'button'; rnd.className = 'small-btn'; rnd.textContent = 'Surprise me';
+  rnd.addEventListener('click', function(){ Object.keys(LABELS).forEach(function(k){ built[k] = Math.floor(Math.random() * PICKS[k].length); }); syncPicks(); refreshPreview(); });
+  $('build-pane').appendChild(rnd);
+  function syncPicks(){ Object.keys(LABELS).forEach(function(k){ valueEls[k].textContent = PICKS[k][built[k]].n; }); }
+  syncPicks();
+
+  var pad = $('pad'), pctx = pad.getContext('2d'), CELL = 15;
+  function drawPad(){
+    pctx.clearRect(0, 0, 240, 240);
+    for (var i = 0; i < 256; i++) if (grid[i]){ pctx.fillStyle = grid[i]; pctx.fillRect((i % 16) * CELL, Math.floor(i / 16) * CELL, CELL, CELL); }
+  }
+  var paintBox = $('paints');
+  PAINTS.concat(['erase']).forEach(function(c, i){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'sw' + (c === 'erase' ? ' eraser' : '');
+    if (c === 'erase') b.textContent = 'ERASE'; else b.style.background = c;
+    b.setAttribute('aria-label', c === 'erase' ? 'Eraser' : 'Paint colour ' + c);
+    b.setAttribute('aria-pressed', String(c === paint));
+    b.addEventListener('click', function(){
+      paint = c;
+      paintBox.querySelectorAll('.sw').forEach(function(x){ x.setAttribute('aria-pressed', String(x === b)); });
+    });
+    paintBox.appendChild(b);
+  });
+  var painting = false;
+  function paintAt(e){
+    var r = pad.getBoundingClientRect();
+    var cx = Math.floor((e.clientX - r.left) / r.width * 16), cy = Math.floor((e.clientY - r.top) / r.height * 16);
+    if (cx < 0 || cy < 0 || cx > 15 || cy > 15) return;
+    grid[cy * 16 + cx] = paint === 'erase' ? null : paint;
+    drawPad(); refreshPreview();
+  }
+  pad.addEventListener('pointerdown', function(e){ painting = true; try { pad.setPointerCapture(e.pointerId); } catch(_){} paintAt(e); });
+  pad.addEventListener('pointermove', function(e){ if (painting) paintAt(e); });
+  ['pointerup','pointercancel','pointerleave'].forEach(function(t){ pad.addEventListener(t, function(){ painting = false; }); });
+  $('clear').addEventListener('click', function(){ grid = new Array(256).fill(null); drawPad(); refreshPreview(); });
+
+  function setTab(m){
+    avMode = m;
+    $('tab-build').setAttribute('aria-pressed', String(m === 'build'));
+    $('tab-draw').setAttribute('aria-pressed', String(m === 'draw'));
+    $('build-pane').hidden = m !== 'build';
+    $('draw-pane').hidden = m !== 'draw';
+    if (m === 'draw' && !grid){ grid = gridFromBuilt(); }
+    if (m === 'draw') drawPad();
+    refreshPreview();
+  }
+  $('tab-build').addEventListener('click', function(){ setTab('build'); });
+  $('tab-draw').addEventListener('click', function(){ setTab('draw'); });
+  refreshPreview();
+  function spriteOf(p){ return p.avatar || gridSvg(compose(VEENA)); }
+
+  /* ---------- Board content ---------- */
+  var LADDERS = {
+    4:[25,'Window seat on the fast local!'],
+    13:[46,'Free bun maska with your cutting chai.'],
+    33:[49,'Client said “no changes”.'],
+    42:[63,'Found a book you can’t put down.'],
+    50:[69,'Monsoon traffic cleared. Miracle!'],
+    62:[81,'Design shipped with zero redlines.'],
+    74:[92,'Met a great designer at the conference.']
+  };
+  var SNAKES = {
+    27:[5,'Missed the 8:12 fast by one second.'],
+    40:[3,'“Quick call?” It was not quick.'],
+    43:[18,'Monsoon puddle. New shoes.'],
+    54:[31,'Meeting that could’ve been an email.'],
+    66:[45,'Opened final_FINAL_v7. Wrong file.'],
+    76:[58,'Someone spoiled your thriller.'],
+    89:[53,'Auto-wala: “meter nahi chalega”.'],
+    99:[41,'Laptop died before you hit save.']
+  };
+  var QUIPS = ['Steady, like a slow local.','Keep going!','Not bad at all.','Smooth moves.','Chalo, onwards.','Easy does it.'];
+  var BOT_LINES = ['Veena: “My turn!”','Veena: “Ladder, please…”','Veena: “No snakes, no snakes…”','Veena: “Watch and learn.”'];
+
+  function rc(n){ var i = n - 1, r = Math.floor(i / 10), c = (r % 2 === 0) ? i % 10 : 9 - (i % 10); return {r:r, c:c}; }
+  function center(n){ var p = rc(n); return {x:p.c * 10 + 5, y:(9 - p.r) * 10 + 5}; }
+
+  (function buildBoard(){
+    var html = '';
+    for (var r = 9; r >= 0; r--){
+      for (var c = 0; c < 10; c++){
+        var n = r * 10 + (r % 2 === 0 ? c : 9 - c) + 1;
+        var cls = n === 100 ? 'goal' : ((r + c) % 2 === 0 ? 'r' : 'p');
+        var ev = LADDERS[n] || SNAKES[n];
+        if (ev) html += '<button type="button" class="cell event ' + cls + '" data-sq="' + n + '" aria-label="Square ' + n + ': ' + esc(ev[1]) + '">' + n + '</button>';
+        else html += '<div class="cell ' + cls + '">' + n + '</div>';
+      }
+    }
+    $('cells').innerHTML = html;
+    $('cells').querySelectorAll('[data-sq]').forEach(function(b){
+      b.addEventListener('click', function(){
+        var n = +b.getAttribute('data-sq'), lad = LADDERS[n];
+        bubbleAt(n, lad ? lad[1] + ' Up to ' + lad[0] + '.' : SNAKES[n][1] + ' Down to ' + SNAKES[n][0] + '.', lad ? 'up' : 'down', 2600);
+      });
+    });
+
+    var g = '';
+    Object.keys(LADDERS).forEach(function(k){
+      var a = center(+k), b = center(LADDERS[k][0]);
+      var dx = b.x - a.x, dy = b.y - a.y, len = Math.sqrt(dx*dx + dy*dy);
+      var px = -dy / len * 2, py = dx / len * 2;
+      g += '<line x1="' + (a.x+px) + '" y1="' + (a.y+py) + '" x2="' + (b.x+px) + '" y2="' + (b.y+py) + '" stroke="#F7C35F" stroke-width="1.1" stroke-linecap="round"/>';
+      g += '<line x1="' + (a.x-px) + '" y1="' + (a.y-py) + '" x2="' + (b.x-px) + '" y2="' + (b.y-py) + '" stroke="#F7C35F" stroke-width="1.1" stroke-linecap="round"/>';
+      var steps = Math.max(3, Math.round(len / 3.6));
+      for (var i = 1; i < steps; i++){
+        var t = i / steps, x = a.x + dx*t, y = a.y + dy*t;
+        g += '<line x1="' + (x+px) + '" y1="' + (y+py) + '" x2="' + (x-px) + '" y2="' + (y-py) + '" stroke="#F7C35F" stroke-width="0.9"/>';
+      }
+    });
+    Object.keys(SNAKES).forEach(function(k){
+      var h = center(+k), t = center(SNAKES[k][0]);
+      var dx = t.x - h.x, dy = t.y - h.y, len = Math.sqrt(dx*dx + dy*dy);
+      var ux = dx / len, uy = dy / len, px = -uy, py = ux;
+      var waves = Math.max(1, Math.round(len / 18)), amp = Math.min(3.4, 1.2 + len * 0.05), pts = [];
+      for (var i = 0; i <= 40; i++){
+        var s = i / 40, w = Math.sin(s * Math.PI * 2 * waves) * amp * (0.35 + 0.65 * Math.sin(Math.PI * Math.min(1, s * 1.15)));
+        pts.push((h.x + dx*s + px*w).toFixed(2) + ',' + (h.y + dy*s + py*w).toFixed(2));
+      }
+      var p = pts.join(' ');
+      g += '<polyline points="' + p + '" fill="none" stroke="#13805A" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round"/>';
+      g += '<polyline points="' + p + '" fill="none" stroke="#22B2C6" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>';
+      var ang = Math.atan2(-uy, -ux) * 180 / Math.PI;
+      g += '<g transform="translate(' + h.x + ' ' + h.y + ') rotate(' + ang + ')">';
+      g += '<ellipse cx="0.6" cy="0" rx="2.6" ry="1.9" fill="#22B2C6" stroke="#13805A" stroke-width="0.5"/>';
+      g += '<circle cx="1.4" cy="-0.8" r="0.55" fill="#FFFFFF"/><circle cx="1.4" cy="0.8" r="0.55" fill="#FFFFFF"/>';
+      g += '<circle cx="1.6" cy="-0.8" r="0.25" fill="#3A0A12"/><circle cx="1.6" cy="0.8" r="0.25" fill="#3A0A12"/>';
+      g += '</g>';
+    });
+    $('overlay').innerHTML = g;
+  })();
+
+  /* ---------- Tooltip bubble ---------- */
+  var bubbleTimer = null;
+  function bubbleAt(n, text, tone, ms){
+    var b = $('bubble'), c = center(Math.max(1, n));
+    b.className = 'bubble' + (tone ? ' ' + tone : '') + (c.y < 24 ? ' below' : '');
+    b.textContent = text;
+    b.style.left = Math.min(80, Math.max(20, c.x)) + '%';
+    b.style.top = c.y + '%';
+    b.hidden = false;
+    clearTimeout(bubbleTimer);
+    bubbleTimer = setTimeout(function(){ b.hidden = true; }, reduce ? Math.max(ms || 2200, 2600) : (ms || 2200));
+  }
+
+  /* ---------- Setup ---------- */
+  var mode = 'bot';
+
+  /* ---------- Game ---------- */
+  var players = [], turn = 0, busy = false, over = false, timers = [];
+  function later(fn, ms){ var t = setTimeout(fn, reduce ? Math.min(ms, 80) : ms); timers.push(t); return t; }
+  function clearTimers(){ timers.forEach(clearTimeout); timers = []; }
+
+  function newGame(){
+    clearTimers();
+    var n1 = $('p1-name').value.trim() || 'You';
+    players = [{name:n1, skin:'p1', avatar:currentAvatar(), pos:0, rolls:0, ladders:0, snakes:0, bot:false}];
+    if (mode === 'bot') players.push({name:'Veena', skin:'bot', pos:0, rolls:0, ladders:0, snakes:0, bot:true});
+    else players.push({name:$('p2-name').value.trim() || 'Player 2', skin:'p2', pos:0, rolls:0, ladders:0, snakes:0, bot:false});
+    turn = 0; busy = false; over = false;
+    $('tokens').innerHTML = players.map(function(p, i){ return '<div class="token" id="tok' + i + '">' + spriteOf(p) + '</div>'; }).join('');
+    players.forEach(function(_, i){ place(i); });
+    $('die').textContent = '?';
+    say('dice', 'First to square <strong>100</strong> wins. You need the exact number to land on it.');
+    showTurn();
+    later(function(){ bubbleAt(1, 'Tap Roll to begin. No pressure.', '', 2600); }, 400);
+  }
+
+  function place(i){
+    var p = players[i], c = center(Math.max(1, p.pos)), el = $('tok' + i);
+    var off = players.length > 1 ? (i === 0 ? -1.8 : 1.8) : 0;
+    el.style.left = (c.x + off) + '%';
+    el.style.top = (c.y + off * 0.6) + '%';
+    el.style.zIndex = i === turn ? 5 : 4;
+  }
+
+  function say(ico, html){ $('log-ico').innerHTML = icon(ico); $('log-text').innerHTML = html; }
+
+  function showTurn(){
+    var p = players[turn];
+    $('turn').innerHTML = spriteOf(p) + '<span>' + esc(p.name) + (p.bot ? ' is rolling…' : '’s turn') + '</span>';
+    $('roll').disabled = busy || over || p.bot;
+    $('roll').textContent = p.bot ? 'Veena’s turn' : 'Roll the dice';
+    players.forEach(function(_, i){ place(i); });
+    if (p.bot && !over){
+      later(function(){ bubbleAt(p.pos || 1, pick(BOT_LINES), '', 1300); }, 150);
+      later(roll, 1300);
+    }
+  }
+
+  function roll(){
+    if (busy || over) return;
+    busy = true; $('roll').disabled = true;
+    var p = players[turn], die = $('die'), spins = 0;
+    die.classList.add('rolling');
+    (function spin(){
+      die.textContent = 1 + Math.floor(Math.random() * 6);
+      if (++spins < 6) later(spin, 70);
+      else {
+        die.classList.remove('rolling');
+        var d = 1 + Math.floor(Math.random() * 6);
+        die.textContent = d; p.rolls++;
+        move(p, d);
+      }
+    })();
+  }
+
+  function move(p, d){
+    var i = players.indexOf(p), start = p.pos, target = p.pos + d;
+    if (target > 100){
+      bubbleAt(p.pos, 'Too much! Need exactly ' + (100 - p.pos) + '.', 'down', 2000);
+      say('dice', '<strong>' + esc(p.name) + '</strong> rolled ' + d + ' but needs exactly ' + (100 - p.pos) + '. Staying put.');
+      return later(function(){ endTurn(d); }, 900);
+    }
+    (function step(){
+      if (p.pos < target){ p.pos++; place(i); later(step, 160); return; }
+      var lad = LADDERS[p.pos], snk = SNAKES[p.pos];
+      if (lad){
+        p.ladders++;
+        bubbleAt(p.pos, lad[1] + ' Up you go!', 'up', 2200);
+        say('ladder', '<strong>' + esc(p.name) + '</strong> rolled ' + d + '. ' + esc(lad[1]) + ' Climb to ' + lad[0] + '.');
+        later(function(){ p.pos = lad[0]; place(i); later(function(){ finish(p, d, start); }, 700); }, 1100);
+      } else if (snk){
+        p.snakes++;
+        bubbleAt(p.pos, snk[1] + ' Oof.', 'down', 2200);
+        say('snake', '<strong>' + esc(p.name) + '</strong> rolled ' + d + '. ' + esc(snk[1]) + ' Slide to ' + snk[0] + '.');
+        later(function(){ p.pos = snk[0]; place(i); later(function(){ finish(p, d, start); }, 700); }, 1100);
+      } else {
+        say('dice', '<strong>' + esc(p.name) + '</strong> rolled ' + d + ' and moved to ' + p.pos + '.');
+        finish(p, d, start, true);
+      }
+    })();
+  }
+
+  function finish(p, d, start, plain){
+    if (p.pos === 100){ over = true; busy = false; bubbleAt(100, 'Square 100! Winner!', 'up', 1800); return later(function(){ showWin(p); }, 1500); }
+    var other = players[(players.indexOf(p) + 1) % players.length];
+    if (d === 6) bubbleAt(p.pos, 'SIX! Roll again.', 'up', 1600);
+    else if (start < other.pos && p.pos > other.pos) bubbleAt(p.pos, 'Bye bye, ' + other.name + '!', 'up', 1800);
+    else if (p.pos >= 94) bubbleAt(p.pos, 'So close. Need exactly ' + (100 - p.pos) + '.', '', 1800);
+    else if (start < 50 && p.pos >= 50 && p.pos < 60) bubbleAt(p.pos, 'Halfway. Chai break?', '', 1800);
+    else if (plain && Math.random() < 0.35) bubbleAt(p.pos, pick(QUIPS), '', 1500);
+    endTurn(d);
+  }
+
+  function endTurn(d){
+    busy = false;
+    if (d === 6) $('log-text').innerHTML += ' <strong>Rolled a 6, go again.</strong>';
+    else turn = (turn + 1) % players.length;
+    later(showTurn, 500);
+  }
+
+  function showWin(p){
+    $('win-sprite').innerHTML = spriteOf(p);
+    if (p.bot){
+      $('win-title').textContent = 'Veena wins this round';
+      $('win-text').textContent = 'She has had years of practice dodging Mumbai’s snakes. Rematch?';
+    } else {
+      $('win-title').textContent = p.name + ' wins!';
+      $('win-text').textContent = mode === 'bot' ? 'You beat Veena on her own board. She owes you a cutting chai.' : 'Square 100, reached. Bragging rights, earned.';
+    }
+    $('win-stats').innerHTML = players.filter(function(x){ return !x.bot; }).map(function(h){
+      return '<span>' + esc(h.name) + ': <b>' + h.rolls + '</b> rolls · <b>' + h.ladders + '</b> ladders · <b>' + h.snakes + '</b> snakes</span>';
+    }).join('');
+    show('win');
+  }
+
+  /* ---------- Screens ---------- */
+  var current = 'intro', returnTo = 'intro';
+  function show(id){ ['intro','game','win','answers'].forEach(function(s){ $(s).hidden = s !== id; }); current = id; window.scrollTo(0, 0); }
+  function nameReady(){ var ok = $('p1-name').value.trim().length > 0; $('start').disabled = !ok; $('start-hint').hidden = ok; return ok; }
+  $('p1-name').addEventListener('input', nameReady);
+  $('p1-name').addEventListener('keydown', function(e){ if (e.key === 'Enter' && nameReady()){ e.preventDefault(); $('p1-name').blur(); show('game'); newGame(); } });
+  nameReady();
+  $('start').addEventListener('click', function(){ if (!nameReady()) return; show('game'); newGame(); });
+  $('roll').addEventListener('click', roll);
+  $('quit').addEventListener('click', function(){ clearTimers(); $('bubble').hidden = true; show('intro'); });
+  $('rematch').addEventListener('click', function(){ show('game'); newGame(); });
+  document.querySelectorAll('[data-answers]').forEach(function(b){
+    b.addEventListener('click', function(){ returnTo = current; $('answer-card').hidden = true; $('reveal').hidden = false; show('answers'); });
+  });
+  $('reveal').addEventListener('click', function(){ $('answer-card').hidden = false; $('reveal').hidden = true; });
+  $('answers-back').addEventListener('click', function(){ show(returnTo); });
+})();
+</script>
+</body>
+</html>
