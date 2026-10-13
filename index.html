@@ -383,7 +383,7 @@ input[type=text]:focus{border-color:var(--yellow);outline:none}
     $('tab-draw').setAttribute('aria-pressed', String(m === 'draw'));
     $('build-pane').hidden = m !== 'build';
     $('draw-pane').hidden = m !== 'draw';
-    if (m === 'draw' && !grid){ grid = gridFromBuilt(); }
+    if (m === 'draw' && !grid){ grid = new Array(256).fill(null); }
     if (m === 'draw') drawPad();
     refreshPreview();
   }
