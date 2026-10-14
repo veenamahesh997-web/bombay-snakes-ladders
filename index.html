@@ -152,6 +152,10 @@ input[type=text]:focus{border-color:var(--yellow);outline:none}
     <p class="lede">Build your player, add a name, then race Veena to 100. Ladders are Mumbai on a good day; snakes are missed trains and monsoon puddles.</p>
 
     <div class="panel">
+      <div class="field">
+        <label class="lbl lg" for="p1-name">Your name</label>
+        <input type="text" id="p1-name" maxlength="14" placeholder="Player 1" autocomplete="off">
+      </div>
       <div class="lbl lg">Make your player</div>
       <div class="maker">
         <div class="preview" id="preview" aria-label="Your player preview" role="img"></div>
@@ -166,10 +170,6 @@ input[type=text]:focus{border-color:var(--yellow);outline:none}
         <div class="pad-wrap"><canvas id="pad" width="240" height="240" aria-label="16 by 16 pixel drawing pad"></canvas></div>
         <div class="sws" id="paints" style="justify-content:center"></div>
         <button class="small-btn" id="clear" type="button">Clear</button>
-      </div>
-      <div class="field">
-        <label class="lbl" for="p1-name">Your name</label>
-        <input type="text" id="p1-name" maxlength="14" placeholder="Player 1" autocomplete="off">
       </div>
       <p class="muted" style="font-size:15px">You vs Veena. First to 100 wins.</p>
     </div>
