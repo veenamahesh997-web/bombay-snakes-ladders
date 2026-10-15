@@ -36,7 +36,9 @@ p{margin:0}
 .btn.yellow{background:var(--yellow);color:var(--on-yellow);border-color:var(--fg)}
 .btn.ghost{background:transparent;border-color:var(--frame)}
 .btns{display:flex;flex-direction:column;gap:14px}
-.social{position:absolute;top:16px;right:16px;z-index:5;display:flex;gap:8px}
+.social{position:absolute;top:12px;right:16px;z-index:5;display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+.social .who{font:500 13px var(--pixel);letter-spacing:.08em;text-transform:uppercase;color:var(--pink)}
+.social .links{display:flex;gap:8px}
 .social a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:8px 13px;border:2px solid var(--frame);background:var(--surface);color:var(--fg);font:700 15px var(--pixel);letter-spacing:.04em;text-decoration:none;box-shadow:3px 3px 0 var(--shadow)}
 .social a:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--shadow)}
 :focus-visible{outline:3px solid var(--yellow);outline-offset:3px}
@@ -140,8 +142,11 @@ input[type=text]:focus{border-color:var(--yellow);outline:none}
   <!-- Start -->
   <section class="screen" id="intro">
     <nav class="social" aria-label="Find Veena online">
-      <a href="https://www.linkedin.com/in/veenamahesh/" target="_blank" rel="noopener">LinkedIn</a>
-      <a href="https://x.com/veenamahessh" target="_blank" rel="noopener">X</a>
+      <span class="who">Say hi to Veena</span>
+      <div class="links">
+        <a href="https://www.linkedin.com/in/veenamahesh/" target="_blank" rel="noopener" aria-label="Veena on LinkedIn">LinkedIn</a>
+        <a href="https://x.com/veenamahessh" target="_blank" rel="noopener" aria-label="Veena on X">X</a>
+      </div>
     </nav>
     <span class="hero float" data-sprite="bot"></span>
     <div class="eyebrow">Player 1, press start</div>
