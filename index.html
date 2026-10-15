@@ -28,6 +28,10 @@ h1{margin:0;font-family:var(--pixel);font-weight:700;font-size:clamp(30px,8.4vw,
 h2{margin:0;font-family:var(--pixel);font-weight:700;font-size:30px;line-height:1.05;color:var(--yellow);text-wrap:balance}
 p{margin:0}
 .lede{font-size:16px;line-height:1.38}
+.jump{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;min-height:36px;margin-top:-6px;padding:0;background:none;border:0;color:var(--pink);font:500 14px var(--pixel);letter-spacing:.04em;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.jump .arw{display:inline-block;animation:nudge 1.2s steps(2) infinite}
+@keyframes nudge{50%{transform:translateY(3px)}}
+@media (prefers-reduced-motion:reduce){.jump .arw{animation:none}}
 .muted{color:var(--muted)}
 .panel{background:var(--surface);border:3px solid var(--frame);box-shadow:5px 5px 0 var(--shadow);padding:16px;display:flex;flex-direction:column;gap:12px}
 .btn{display:block;width:100%;min-height:56px;padding:12px 20px;border:3px solid var(--yellow);background:var(--pink);color:var(--fg);font:700 22px var(--pixel);letter-spacing:.04em;text-align:center;text-decoration:none;cursor:pointer;box-shadow:5px 5px 0 var(--shadow)}
@@ -155,6 +159,7 @@ input[type=text]:focus{border-color:var(--yellow);outline:none}
       <div class="sub">Bombay Edition</div>
     </div>
     <p class="lede">Add your name, build your player and race Veena to 100. Climb the ladders, dodge the snakes.</p>
+    <button class="jump" type="button" id="jump-answers">Crossword answers are at the bottom <span class="arw" aria-hidden="true">↓</span></button>
 
     <div class="panel">
       <div class="field">
@@ -180,7 +185,7 @@ input[type=text]:focus{border-color:var(--yellow);outline:none}
     </div>
     <button class="btn" id="start" type="button" disabled>Press start</button>
     <p class="muted" id="start-hint" style="font-size:15px;text-align:center;margin-top:-6px">Enter your name to start</p>
-    <button class="btn ghost" type="button" data-answers>Crossword answers</button>
+    <button class="btn ghost" type="button" id="answers-btn" data-answers>Crossword answers</button>
   </section>
 
   <!-- Game -->
@@ -631,6 +636,7 @@ input[type=text]:focus{border-color:var(--yellow);outline:none}
   nameReady();
   $('start').addEventListener('click', function(){ if (!nameReady()) return; show('game'); newGame(); });
   $('roll').addEventListener('click', roll);
+  $('jump-answers').addEventListener('click', function(){ var b = $('answers-btn'); b.scrollIntoView({behavior: reduce ? 'auto' : 'smooth', block: 'center'}); setTimeout(function(){ b.focus({preventScroll:true}); }, reduce ? 0 : 500); });
   $('quit').addEventListener('click', function(){ clearTimers(); $('bubble').hidden = true; show('intro'); });
   $('rematch').addEventListener('click', function(){ show('game'); newGame(); });
   document.querySelectorAll('[data-answers]').forEach(function(b){
