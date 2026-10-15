@@ -43,6 +43,9 @@ p{margin:0}
 .social{position:absolute;top:12px;right:16px;z-index:5;display:flex;flex-direction:column;align-items:flex-end;gap:5px}
 .social .who{font:500 13px var(--pixel);letter-spacing:.08em;text-transform:uppercase;color:var(--pink)}
 .social .links{display:flex;gap:8px}
+.topnav{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.navbtn{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:8px 13px;border:2px solid var(--frame);background:var(--surface);color:var(--fg);font:700 15px var(--pixel);letter-spacing:.04em;cursor:pointer;box-shadow:3px 3px 0 var(--shadow)}
+.navbtn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--shadow)}
 .social a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:8px 13px;border:2px solid var(--frame);background:var(--surface);color:var(--fg);font:700 15px var(--pixel);letter-spacing:.04em;text-decoration:none;box-shadow:3px 3px 0 var(--shadow)}
 .social a:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--shadow)}
 :focus-visible{outline:3px solid var(--yellow);outline-offset:3px}
@@ -190,6 +193,9 @@ input[type=text]:focus{border-color:var(--yellow);outline:none}
 
   <!-- Game -->
   <section class="screen" id="game" hidden>
+    <nav class="topnav" aria-label="Game">
+      <button class="navbtn" id="game-home" type="button"><span aria-hidden="true">←</span> Home</button>
+    </nav>
     <div class="turn" id="turn"></div>
     <div class="board" id="board" role="group" aria-label="Snakes and ladders board">
       <div class="cells" id="cells"></div>
@@ -236,6 +242,10 @@ input[type=text]:focus{border-color:var(--yellow);outline:none}
 
   <!-- Crossword answers -->
   <section class="screen" id="answers" hidden>
+    <nav class="topnav" aria-label="Answers">
+      <button class="navbtn" id="answers-back-top" type="button"><span aria-hidden="true">←</span> Back</button>
+      <button class="navbtn" id="answers-home" type="button">Home</button>
+    </nav>
     <div class="eyebrow">Level 2</div>
     <h2>The Design Bombay Mystery: answers</h2>
     <p class="muted">Spoilers below. Only peek if you’ve given it a real go.</p>
@@ -658,10 +668,18 @@ input[type=text]:focus{border-color:var(--yellow);outline:none}
   $('start').addEventListener('click', function(){ if (!nameReady()) return; show('game'); newGame(); });
   $('roll').addEventListener('click', roll);
   $('jump-answers').addEventListener('click', function(){ var b = $('answers-btn'); b.scrollIntoView({behavior: reduce ? 'auto' : 'smooth', block: 'center'}); setTimeout(function(){ b.focus({preventScroll:true}); }, reduce ? 0 : 500); });
-  $('quit').addEventListener('click', function(){ clearTimers(); $('bubble').hidden = true; show('intro'); });
+  function goHome(){ clearTimers(); busy = false; $('bubble').hidden = true; show('intro'); }
+  $('quit').addEventListener('click', goHome);
+  $('game-home').addEventListener('click', function(){
+    var midGame = !over && players.some(function(p){ return p.rolls > 0; });
+    if (midGame && !window.confirm('Leave this game? Your progress will be lost.')) return;
+    goHome();
+  });
+  $('answers-home').addEventListener('click', goHome);
+  $('answers-back-top').addEventListener('click', function(){ show(returnTo); });
   $('rematch').addEventListener('click', function(){ show('game'); newGame(); });
   document.querySelectorAll('[data-answers]').forEach(function(b){
-    b.addEventListener('click', function(){ returnTo = current; $('answer-card').hidden = true; $('reveal').hidden = false; show('answers'); });
+    b.addEventListener('click', function(){ returnTo = current; $('answer-card').hidden = true; $('reveal').hidden = false; $('answers-home').hidden = returnTo === 'intro'; show('answers'); });
   });
   $('reveal').addEventListener('click', function(){ $('answer-card').hidden = false; $('reveal').hidden = true; });
   $('answers-back').addEventListener('click', function(){ show(returnTo); });
