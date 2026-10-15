@@ -432,8 +432,29 @@ input[type=text]:focus{border-color:var(--yellow);outline:none}
     89:[53,'Auto-wala: “meter nahi chalega”.'],
     99:[41,'Laptop died before you hit save.']
   };
-  var QUIPS = ['Steady, like a slow local.','Keep going!','Not bad at all.','Smooth moves.','Chalo, onwards.','Easy does it.'];
-  var BOT_LINES = ['Veena: “My turn!”','Veena: “Ladder, please…”','Veena: “No snakes, no snakes…”','Veena: “Watch and learn.”'];
+  /* Dialogue: each set is dealt like a shuffled deck, so a line never repeats until the whole set has been used. */
+  var LINES = {
+    quip: ['Steady, like a slow local.','Chalo, onwards.','Easy does it.','Smooth moves.','Not bad at all.','Slow and steady, like Sunday traffic.','Moving like a Bandra auto.','Tiny steps still count.','Ek number move.','Cruising along Marine Drive.','No rush, the vada pav can wait.','That’s the spirit.'],
+    bot: ['My turn!','Ladder, please…','No snakes, no snakes…','Watch and learn.','Okay, focus.','Come on, give me a six.','Haha, I’ve got this.','Fingers crossed.','Don’t jinx it…','Here goes nothing.','Let’s see what Mumbai gives me.','Bappa, help me out.'],
+    six: ['SIX! Roll again.','Six! One more go.','Sixer! Roll again.','Six! Bonus turn.','Boundary! Six again?','Chakka! Go again.','Six! The dice likes you.','Six! Don’t stop now.','Six! Lucky day.'],
+    ladder: ['Up you go!','Fast train upgrade!','Straight to the top.','Kya baat hai!','Express route!','Window seat, sorted.'],
+    snake: ['Oof.','Arre yaar.','Back you go.','That stings.','Mumbai happens.','Next time, boss.'],
+    pass: ['Bye bye, {n}!','See you later, {n}!','Overtaken, {n}!','Excuse me, {n}, coming through!','Catch me if you can, {n}!'],
+    half: ['Halfway. Chai break?','Halfway there. Cutting chai?','50 down, 50 to go.'],
+    close: ['So close. Need exactly {k}.','Almost home. Need exactly {k}.','Just {k} more. Exactly {k}.'],
+    over: ['Too much! Need exactly {k}.','Overshot. Need exactly {k}.','Not quite. Exactly {k} only.']
+  };
+  var decks = {}, lastLine = {};
+  function line(key, vars){
+    var d = decks[key];
+    if (!d || !d.length){
+      d = decks[key] = LINES[key].slice();
+      for (var i = d.length - 1; i > 0; i--){ var j = Math.floor(Math.random() * (i + 1)); var t = d[i]; d[i] = d[j]; d[j] = t; }
+      if (d.length > 1 && d[d.length - 1] === lastLine[key]) { var x = d[0]; d[0] = d[d.length - 1]; d[d.length - 1] = x; }
+    }
+    var out = lastLine[key] = d.pop();
+    return out.replace(/\{(\w)\}/g, function(_, k){ return vars && vars[k] != null ? vars[k] : ''; });
+  }
 
   function rc(n){ var i = n - 1, r = Math.floor(i / 10), c = (r % 2 === 0) ? i % 10 : 9 - (i % 10); return {r:r, c:c}; }
   function center(n){ var p = rc(n); return {x:p.c * 10 + 5, y:(9 - p.r) * 10 + 5}; }
@@ -545,7 +566,7 @@ input[type=text]:focus{border-color:var(--yellow);outline:none}
     $('roll').textContent = p.bot ? 'Veena’s turn' : 'Roll the dice';
     players.forEach(function(_, i){ place(i); });
     if (p.bot && !over){
-      later(function(){ bubbleAt(p.pos || 1, pick(BOT_LINES), '', 1300); }, 150);
+      later(function(){ if (Math.random() < 0.6) bubbleAt(p.pos || 1, line('bot'), '', 1300); }, 150);
       later(roll, 1300);
     }
   }
@@ -570,7 +591,7 @@ input[type=text]:focus{border-color:var(--yellow);outline:none}
   function move(p, d){
     var i = players.indexOf(p), start = p.pos, target = p.pos + d;
     if (target > 100){
-      bubbleAt(p.pos, 'Too much! Need exactly ' + (100 - p.pos) + '.', 'down', 2000);
+      bubbleAt(p.pos, line('over', {k: 100 - p.pos}), 'down', 2000);
       say('dice', '<strong>' + esc(p.name) + '</strong> rolled ' + d + ' but needs exactly ' + (100 - p.pos) + '. Staying put.');
       return later(function(){ endTurn(d); }, 900);
     }
@@ -579,12 +600,12 @@ input[type=text]:focus{border-color:var(--yellow);outline:none}
       var lad = LADDERS[p.pos], snk = SNAKES[p.pos];
       if (lad){
         p.ladders++;
-        bubbleAt(p.pos, lad[1] + ' Up you go!', 'up', 2200);
+        bubbleAt(p.pos, lad[1] + ' ' + line('ladder'), 'up', 2200);
         say('ladder', '<strong>' + esc(p.name) + '</strong> rolled ' + d + '. ' + esc(lad[1]) + ' Climb to ' + lad[0] + '.');
         later(function(){ p.pos = lad[0]; place(i); later(function(){ finish(p, d, start); }, 700); }, 1100);
       } else if (snk){
         p.snakes++;
-        bubbleAt(p.pos, snk[1] + ' Oof.', 'down', 2200);
+        bubbleAt(p.pos, snk[1] + ' ' + line('snake'), 'down', 2200);
         say('snake', '<strong>' + esc(p.name) + '</strong> rolled ' + d + '. ' + esc(snk[1]) + ' Slide to ' + snk[0] + '.');
         later(function(){ p.pos = snk[0]; place(i); later(function(){ finish(p, d, start); }, 700); }, 1100);
       } else {
@@ -597,11 +618,11 @@ input[type=text]:focus{border-color:var(--yellow);outline:none}
   function finish(p, d, start, plain){
     if (p.pos === 100){ over = true; busy = false; bubbleAt(100, 'Square 100! Winner!', 'up', 1800); return later(function(){ showWin(p); }, 1500); }
     var other = players[(players.indexOf(p) + 1) % players.length];
-    if (d === 6) bubbleAt(p.pos, 'SIX! Roll again.', 'up', 1600);
-    else if (start < other.pos && p.pos > other.pos) bubbleAt(p.pos, 'Bye bye, ' + other.name + '!', 'up', 1800);
-    else if (p.pos >= 94) bubbleAt(p.pos, 'So close. Need exactly ' + (100 - p.pos) + '.', '', 1800);
-    else if (start < 50 && p.pos >= 50 && p.pos < 60) bubbleAt(p.pos, 'Halfway. Chai break?', '', 1800);
-    else if (plain && Math.random() < 0.35) bubbleAt(p.pos, pick(QUIPS), '', 1500);
+    if (d === 6) bubbleAt(p.pos, line('six'), 'up', 1600);
+    else if (start < other.pos && p.pos > other.pos) bubbleAt(p.pos, line('pass', {n: other.name}), 'up', 1800);
+    else if (p.pos >= 94) bubbleAt(p.pos, line('close', {k: 100 - p.pos}), '', 1800);
+    else if (start < 50 && p.pos >= 50 && p.pos < 60) bubbleAt(p.pos, line('half'), '', 1800);
+    else if (plain && Math.random() < 0.35) bubbleAt(p.pos, line('quip'), '', 1500);
     endTurn(d);
   }
 
