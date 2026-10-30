@@ -45,6 +45,7 @@ p{margin:0}
 .social .links{display:flex;gap:8px}
 .topnav{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .navbtn{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:8px 13px;border:2px solid var(--frame);background:var(--surface);color:var(--fg);font:700 15px var(--pixel);letter-spacing:.04em;cursor:pointer;box-shadow:3px 3px 0 var(--shadow)}
+.navbtn[aria-pressed=false]{color:var(--muted)}
 .navbtn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--shadow)}
 .social a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:8px 13px;border:2px solid var(--frame);background:var(--surface);color:var(--fg);font:700 15px var(--pixel);letter-spacing:.04em;text-decoration:none;box-shadow:3px 3px 0 var(--shadow)}
 .social a:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--shadow)}
@@ -195,6 +196,7 @@ input[type=text]:focus{border-color:var(--yellow);outline:none}
   <section class="screen" id="game" hidden>
     <nav class="topnav" aria-label="Game">
       <button class="navbtn" id="game-home" type="button"><span aria-hidden="true">←</span> Home</button>
+      <button class="navbtn" id="sound" type="button" aria-pressed="true"><i aria-hidden="true" style="font-style:normal">♪</i><span>Sound on</span></button>
     </nav>
     <div class="turn" id="turn"></div>
     <div class="board" id="board" role="group" aria-label="Snakes and ladders board">
@@ -539,6 +541,78 @@ input[type=text]:focus{border-color:var(--yellow);outline:none}
   /* ---------- Setup ---------- */
   var mode = 'bot';
 
+  /* ---------- Sound (synthesised in the browser, no audio files) ---------- */
+  /* SND-START */
+  function makeSound(factory){
+    var KEY = 'bsl-sound', ctx = null, out = null, nb = null, on = true;
+    try { on = localStorage.getItem(KEY) !== 'off'; } catch (e) {}
+    var SC = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.51]; /* C major pentatonic: every note sounds good next to every other */
+    function init(){
+      if (!ctx){
+        try { ctx = factory(); } catch (e) { ctx = null; }
+        if (!ctx) return false;
+        var g = ctx.createGain(); g.gain.value = 0.9;
+        var f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 2800; f.Q.value = 0.5;
+        g.connect(f); f.connect(ctx.destination); out = g;
+      }
+      if (ctx.state === 'suspended'){ try { var r = ctx.resume(); if (r && r.catch) r.catch(function(){}); } catch (e) {} }
+      return true;
+    }
+    function tone(type, f0, t, dur, vol, f1, vib){
+      var o = ctx.createOscillator(), g = ctx.createGain(), t0 = ctx.currentTime + t;
+      o.type = type; o.frequency.setValueAtTime(f0, t0);
+      if (f1) o.frequency.exponentialRampToValueAtTime(f1, t0 + dur);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(vol, t0 + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g); g.connect(out);
+      if (vib){
+        var l = ctx.createOscillator(), lg = ctx.createGain();
+        l.frequency.value = vib.rate; lg.gain.value = vib.depth; l.connect(lg); lg.connect(o.frequency);
+        l.start(t0); l.stop(t0 + dur + 0.05);
+      }
+      o.start(t0); o.stop(t0 + dur + 0.05);
+    }
+    function tick(t, freq, vol){
+      if (!nb){
+        nb = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.1), ctx.sampleRate);
+        var d = nb.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      }
+      var s = ctx.createBufferSource(), b = ctx.createBiquadFilter(), g = ctx.createGain(), t0 = ctx.currentTime + t;
+      s.buffer = nb; b.type = 'bandpass'; b.frequency.value = freq; b.Q.value = 1.2;
+      g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.035);
+      s.connect(b); b.connect(g); g.connect(out); s.start(t0); s.stop(t0 + 0.06);
+    }
+    var sfx = {
+      start: function(){ tone('square', SC[2], 0, 0.07, 0.09); tone('square', SC[5], 0.07, 0.12, 0.09); },
+      pop:   function(){ tone('square', SC[3], 0, 0.06, 0.08); },
+      dice:  function(){ for (var i = 0; i < 6; i++) tick(i * 0.07, 1500 + Math.random() * 900, 0.5); },
+      land:  function(){ tone('sine', 220, 0, 0.12, 0.3, 110); tick(0, 2200, 0.22); },
+      step:  function(k, bot){ tone(bot ? 'triangle' : 'square', SC[Math.min(k, SC.length - 1)], 0, 0.09, bot ? 0.2 : 0.085); },
+      ladder:function(){ for (var i = 0; i < 6; i++) tone('triangle', SC[i], i * 0.07, 0.16, 0.2); tone('sine', SC[7], 0.44, 0.35, 0.14); },
+      snake: function(){ tone('triangle', 520, 0, 0.7, 0.26, 150, {rate: 8, depth: 28}); tone('sine', 110, 0.62, 0.16, 0.22); },
+      six:   function(){ tone('sine', SC[5], 0, 0.18, 0.24); tone('sine', SC[7], 0.1, 0.3, 0.24); },
+      bonk:  function(){ tone('triangle', 230, 0, 0.16, 0.28, 150); tone('triangle', 200, 0.15, 0.2, 0.22, 120); },
+      win:   function(){
+        [0, 2, 3, 5, 7].forEach(function(n, i){ tone('triangle', SC[n], i * 0.09, 0.22, 0.22); });
+        [5, 7, 3].forEach(function(n){ tone('triangle', SC[n] * (n === 3 ? 2 : 1), 0.5, 0.8, 0.12); });
+      },
+      lose:  function(){ tone('triangle', 392, 0, 0.3, 0.2); tone('triangle', 329.63, 0.22, 0.3, 0.2); tone('triangle', 261.63, 0.44, 0.65, 0.2); }
+    };
+    function save(){ try { localStorage.setItem(KEY, on ? 'on' : 'off'); } catch (e) {} }
+    return {
+      init: init,
+      isOn: function(){ return on; },
+      play: function(name, a, b){ if (!on || !ctx || !sfx[name]) return; try { sfx[name](a, b); } catch (e) {} },
+      toggle: function(){ on = !on; save(); if (on && init()) sfx.pop(); return on; },
+      pause: function(){ if (ctx && ctx.suspend) { try { ctx.suspend(); } catch (e) {} } },
+      resume: function(){ if (on && ctx && ctx.state === 'suspended') { try { ctx.resume(); } catch (e) {} } }
+    };
+  }
+  /* SND-END */
+  var Snd = makeSound(function(){ var AC = window.AudioContext || window.webkitAudioContext; return AC ? new AC() : null; });
+  document.addEventListener('visibilitychange', function(){ if (document.hidden) Snd.pause(); else Snd.resume(); });
+
   /* ---------- Game ---------- */
   var players = [], turn = 0, busy = false, over = false, timers = [];
   function later(fn, ms){ var t = setTimeout(fn, reduce ? Math.min(ms, 80) : ms); timers.push(t); return t; }
@@ -584,6 +658,7 @@ input[type=text]:focus{border-color:var(--yellow);outline:none}
   function roll(){
     if (busy || over) return;
     busy = true; $('roll').disabled = true;
+    Snd.play('dice');
     var p = players[turn], die = $('die'), spins = 0;
     die.classList.add('rolling');
     (function spin(){
@@ -592,32 +667,33 @@ input[type=text]:focus{border-color:var(--yellow);outline:none}
       else {
         die.classList.remove('rolling');
         var d = 1 + Math.floor(Math.random() * 6);
-        die.textContent = d; p.rolls++;
+        die.textContent = d; p.rolls++; Snd.play('land');
         move(p, d);
       }
     })();
   }
 
   function move(p, d){
-    var i = players.indexOf(p), start = p.pos, target = p.pos + d;
+    var i = players.indexOf(p), start = p.pos, target = p.pos + d, k = 0;
     if (target > 100){
+      Snd.play('bonk');
       bubbleAt(p.pos, line('over', {k: 100 - p.pos}), 'down', 2000);
       say('dice', '<strong>' + esc(p.name) + '</strong> rolled ' + d + ' but needs exactly ' + (100 - p.pos) + '. Staying put.');
       return later(function(){ endTurn(d); }, 900);
     }
     (function step(){
-      if (p.pos < target){ p.pos++; place(i); later(step, 160); return; }
+      if (p.pos < target){ p.pos++; Snd.play('step', k++, p.bot); place(i); later(step, 160); return; }
       var lad = LADDERS[p.pos], snk = SNAKES[p.pos];
       if (lad){
         p.ladders++;
         bubbleAt(p.pos, lad[1] + ' ' + line('ladder'), 'up', 2200);
         say('ladder', '<strong>' + esc(p.name) + '</strong> rolled ' + d + '. ' + esc(lad[1]) + ' Climb to ' + lad[0] + '.');
-        later(function(){ p.pos = lad[0]; place(i); later(function(){ finish(p, d, start); }, 700); }, 1100);
+        later(function(){ Snd.play('ladder'); p.pos = lad[0]; place(i); later(function(){ finish(p, d, start); }, 700); }, 1100);
       } else if (snk){
         p.snakes++;
         bubbleAt(p.pos, snk[1] + ' ' + line('snake'), 'down', 2200);
         say('snake', '<strong>' + esc(p.name) + '</strong> rolled ' + d + '. ' + esc(snk[1]) + ' Slide to ' + snk[0] + '.');
-        later(function(){ p.pos = snk[0]; place(i); later(function(){ finish(p, d, start); }, 700); }, 1100);
+        later(function(){ Snd.play('snake'); p.pos = snk[0]; place(i); later(function(){ finish(p, d, start); }, 700); }, 1100);
       } else {
         say('dice', '<strong>' + esc(p.name) + '</strong> rolled ' + d + ' and moved to ' + p.pos + '.');
         finish(p, d, start, true);
@@ -626,9 +702,9 @@ input[type=text]:focus{border-color:var(--yellow);outline:none}
   }
 
   function finish(p, d, start, plain){
-    if (p.pos === 100){ over = true; busy = false; bubbleAt(100, 'Square 100! Winner!', 'up', 1800); return later(function(){ showWin(p); }, 1500); }
+    if (p.pos === 100){ over = true; busy = false; Snd.play(p.bot ? 'lose' : 'win'); bubbleAt(100, 'Square 100! Winner!', 'up', 1800); return later(function(){ showWin(p); }, 1500); }
     var other = players[(players.indexOf(p) + 1) % players.length];
-    if (d === 6) bubbleAt(p.pos, line('six'), 'up', 1600);
+    if (d === 6){ Snd.play('six'); bubbleAt(p.pos, line('six'), 'up', 1600); }
     else if (start < other.pos && p.pos > other.pos) bubbleAt(p.pos, line('pass', {n: other.name}), 'up', 1800);
     else if (p.pos >= 94) bubbleAt(p.pos, line('close', {k: 100 - p.pos}), '', 1800);
     else if (start < 50 && p.pos >= 50 && p.pos < 60) bubbleAt(p.pos, line('half'), '', 1800);
@@ -663,10 +739,10 @@ input[type=text]:focus{border-color:var(--yellow);outline:none}
   function show(id){ ['intro','game','win','answers'].forEach(function(s){ $(s).hidden = s !== id; }); current = id; window.scrollTo(0, 0); }
   function nameReady(){ var ok = $('p1-name').value.trim().length > 0; $('start').disabled = !ok; $('start-hint').hidden = ok; return ok; }
   $('p1-name').addEventListener('input', nameReady);
-  $('p1-name').addEventListener('keydown', function(e){ if (e.key === 'Enter' && nameReady()){ e.preventDefault(); $('p1-name').blur(); show('game'); newGame(); } });
+  $('p1-name').addEventListener('keydown', function(e){ if (e.key === 'Enter' && nameReady()){ e.preventDefault(); $('p1-name').blur(); Snd.init(); Snd.play('start'); show('game'); newGame(); } });
   nameReady();
-  $('start').addEventListener('click', function(){ if (!nameReady()) return; show('game'); newGame(); });
-  $('roll').addEventListener('click', roll);
+  $('start').addEventListener('click', function(){ if (!nameReady()) return; Snd.init(); Snd.play('start'); show('game'); newGame(); });
+  $('roll').addEventListener('click', function(){ Snd.init(); roll(); });
   $('jump-answers').addEventListener('click', function(){ var b = $('answers-btn'); b.scrollIntoView({behavior: reduce ? 'auto' : 'smooth', block: 'center'}); setTimeout(function(){ b.focus({preventScroll:true}); }, reduce ? 0 : 500); });
   function goHome(){ clearTimers(); busy = false; $('bubble').hidden = true; show('intro'); }
   $('quit').addEventListener('click', goHome);
@@ -677,7 +753,10 @@ input[type=text]:focus{border-color:var(--yellow);outline:none}
   });
   $('answers-home').addEventListener('click', goHome);
   $('answers-back-top').addEventListener('click', function(){ show(returnTo); });
-  $('rematch').addEventListener('click', function(){ show('game'); newGame(); });
+  $('rematch').addEventListener('click', function(){ Snd.init(); Snd.play('start'); show('game'); newGame(); });
+  function syncSound(){ var b = $('sound'), on = Snd.isOn(); b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.querySelector('span').textContent = on ? 'Sound on' : 'Sound off'; b.querySelector('i').textContent = on ? '♪' : '×'; }
+  $('sound').addEventListener('click', function(){ Snd.init(); Snd.toggle(); syncSound(); });
+  syncSound();
   document.querySelectorAll('[data-answers]').forEach(function(b){
     b.addEventListener('click', function(){ returnTo = current; $('answer-card').hidden = true; $('reveal').hidden = false; $('answers-home').hidden = returnTo === 'intro'; show('answers'); });
   });
